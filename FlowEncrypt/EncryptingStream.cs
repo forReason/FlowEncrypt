@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 
 namespace FlowEncrypt
@@ -6,40 +7,54 @@ namespace FlowEncrypt
     /// <summary>
     /// Provides a stream that encrypts data using AES with a split salt.
     /// </summary>
-    internal class EncryptingStream : Stream
+    public class EncryptingStream : Stream
     {
-        private readonly Stream _baseStream;
         private readonly CryptoStream _cryptoStream;
         private readonly Aes _aes;
-        private readonly byte[] _secondHalfOfSalt;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EncryptingStream"/> class.
         /// </summary>
         /// <param name="baseStream">The stream where the encrypted data will be written.</param>
         /// <param name="password">The password used for encryption.</param>
-        public EncryptingStream(Stream baseStream, string password) : base()
+        /// <param name="publicKey">Optionally provide a public key for encryption<br/>
+        /// This facilitates asymmetric encryption,
+        /// where data encrypted with a public key can only be decrypted with the corresponding private </param>
+        public EncryptingStream(Stream baseStream, string password, X509Certificate2? publicKey = null)
         {
-            _baseStream = baseStream;
-
+            Stream baseStream1 = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
+            _aes = Aes.Create();
+            _aes.KeySize = 256; // Set KeySize
+            
             // Generate a new random salt
             byte[] salt = RandomNumberGenerator.GetBytes(16);
 
-            // Split the salt into two halves
-            byte[] firstHalfOfSalt = salt.Take(8).ToArray();
-            _secondHalfOfSalt = salt.Skip(8).ToArray();
+            if (publicKey != null)
+            {
+                // Encrypt the salt with the public key if provided
+                using RSA? rsa = publicKey.GetRSAPublicKey();
+                if (rsa == null)
+                    throw new Exception("Could not identify a valid rsa public key in the keyfile");
+                byte[] encryptedSalt = rsa.Encrypt(salt, RSAEncryptionPadding.OaepSHA256);
 
-            // Generate key and IV from the password and full salt
-            (_aes = Aes.Create()).KeySize = 256; // Set KeySize
-            var (key, iv) = HelperFunctions.GenerateKeyAndIVFromPassword(password, salt);
+                // Write the length of the encrypted salt followed by the encrypted salt itself
+                byte[] encryptedSaltLength = BitConverter.GetBytes(encryptedSalt.Length);
+                baseStream1.Write(encryptedSaltLength, 0, encryptedSaltLength.Length);
+                baseStream1.Write(encryptedSalt, 0, encryptedSalt.Length);
+            }
+            else
+            {
+                // Write the salt unencrypted if no public key is provided
+                baseStream1.Write(salt, 0, salt.Length);
+            }
+
+            // Generate key and IV from the password and salt
+            (byte[] key, byte[] iv) = HelperFunctions.GenerateKeyAndIVFromPassword(password, salt);
             _aes.Key = key;
             _aes.IV = iv;
 
-            // Write the first half of the salt at the beginning of the base stream
-            _baseStream.Write(firstHalfOfSalt, 0, firstHalfOfSalt.Length);
-
             // Create a CryptoStream for encryption
-            _cryptoStream = new CryptoStream(_baseStream, _aes.CreateEncryptor(), CryptoStreamMode.Write, leaveOpen: true);
+            _cryptoStream = new CryptoStream(baseStream1, _aes.CreateEncryptor(), CryptoStreamMode.Write, leaveOpen: true);
         }
         /// <summary>
         /// flushes the stream
@@ -61,9 +76,6 @@ namespace FlowEncrypt
                 _cryptoStream.FlushFinalBlock();
                 _cryptoStream.Dispose();
                 _aes.Dispose();
-
-                // Write the second half of the salt at the end of the base stream
-                _baseStream.Write(_secondHalfOfSalt, 0, _secondHalfOfSalt.Length);
             }
             base.Dispose(disposing);
         }

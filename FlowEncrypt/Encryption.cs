@@ -20,7 +20,7 @@ namespace FlowEncrypt
         {
             // Generate a new random salt
             byte[] salt = new byte[16];
-            using (var rng = new RNGCryptoServiceProvider())
+            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
             {
                 rng.GetBytes(salt);
             }
@@ -30,7 +30,7 @@ namespace FlowEncrypt
             byte[] secondHalfOfSalt = salt.Skip(8).ToArray();
 
             // Generate key and IV from the password and full salt
-            var (key, iv) = GenerateKeyAndIVFromPassword(password, salt);
+            (byte[] key, byte[] iv) = HelperFunctions.GenerateKeyAndIVFromPassword(password, salt);
 
             // Write the first half of the salt at the beginning of the output stream
             outputStream.Write(firstHalfOfSalt, 0, firstHalfOfSalt.Length);
@@ -75,7 +75,7 @@ namespace FlowEncrypt
             byte[] fullSalt = firstHalfOfSalt.Concat(secondHalfOfSalt).ToArray();
 
             // Generate key and IV from the password and full salt
-            var (key, iv) = GenerateKeyAndIVFromPassword(password, fullSalt);
+            (byte[] key, byte[] iv) = HelperFunctions.GenerateKeyAndIVFromPassword(password, fullSalt);
 
             // Exclude the second half of the salt from the encrypted data
             inputStream.SetLength(inputStream.Length - 8);

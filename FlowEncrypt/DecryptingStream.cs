@@ -1,7 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Security.Cryptography;
-using System.Linq;
+﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace FlowEncrypt
 {
@@ -10,9 +8,8 @@ namespace FlowEncrypt
     /// This stream is read-only and intended for decrypting data that was previously encrypted
     /// using a corresponding encrypting stream with the same password and salt approach.
     /// </summary>
-    internal class DecryptingStream : Stream
+    public class DecryptingStream : Stream
     {
-        private readonly Stream _baseStream;
         private readonly CryptoStream _cryptoStream;
         /// <summary>
         /// Initializes a new instance of the <see cref="DecryptingStream"/> class.
@@ -20,37 +17,44 @@ namespace FlowEncrypt
         /// <param name="baseStream">The stream containing the encrypted data.</param>
         /// <param name="password">The password used for decryption. This password must match the password used for encryption. 
         /// The password should be strong (e.g., a combination of letters, numbers, and special characters) to ensure security.</param>
+        /// <param name="privateKey">Optionally provide a private key for decryption if a public key was used to encrypt<br/>
+        /// This facilitates asymmetric encryption,
+        /// where data encrypted with a public key can only be decrypted with the corresponding private key.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseStream"/> is null.</exception>
-        public DecryptingStream(Stream baseStream, string password)
+        public DecryptingStream(Stream baseStream, string password, X509Certificate2? privateKey = null)
         {
-            _baseStream = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
+            Stream baseStream1 = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
 
-            // Read the first half of the salt from the start of the stream
-            byte[] firstHalfOfSalt = new byte[8];
-            _baseStream.Read(firstHalfOfSalt, 0, firstHalfOfSalt.Length);
+            // Read the length of the encrypted salt (if encrypted salt is used)
+            byte[] salt;
+            if (privateKey != null)
+            {
+                byte[] saltLengthBytes = new byte[4];
+                _ = baseStream1.Read(saltLengthBytes, 0, 4);
+                int saltLength = BitConverter.ToInt32(saltLengthBytes, 0);
 
-            // Move to the position of the second half of the salt
-            _baseStream.Position = _baseStream.Length - 8;
+                byte[] encryptedSalt = new byte[saltLength];
+                _ = baseStream1.Read(encryptedSalt, 0, saltLength);
 
-            // Read the second half of the salt
-            byte[] secondHalfOfSalt = new byte[8];
-            _baseStream.Read(secondHalfOfSalt, 0, secondHalfOfSalt.Length);
+                using RSA? rsa = privateKey.GetRSAPrivateKey();
+                if (rsa == null)
+                    throw new Exception("private key file could not identify a valid RSA key");
+                salt = rsa.Decrypt(encryptedSalt, RSAEncryptionPadding.OaepSHA256);
+            }
+            else
+            {
+                // If no private key is provided, read the salt as unencrypted
+                salt = new byte[16];
+                _ = baseStream1.Read(salt, 0, salt.Length);
+            }
 
-            // Combine the two halves to get the full salt
-            byte[] fullSalt = firstHalfOfSalt.Concat(secondHalfOfSalt).ToArray();
-
-            // Generate key and IV from the password and full salt
-            var (key, iv) = HelperFunctions.GenerateKeyAndIVFromPassword(password, fullSalt);
-
-            // Exclude the second half of the salt from the encrypted data
-            _baseStream.SetLength(_baseStream.Length - 8);
-
-            // Reset the position of the stream to just after the first half of the salt
-            _baseStream.Position = 8;
+            // Generate key and IV from the password and salt
+            (byte[] key, byte[] iv) = HelperFunctions.GenerateKeyAndIVFromPassword(password, salt);
 
             // Create a CryptoStream for decryption
-            _cryptoStream = new CryptoStream(_baseStream, HelperFunctions.CreateDecryptor(key, iv), CryptoStreamMode.Read, leaveOpen: true);
+            _cryptoStream = new CryptoStream(baseStream1, HelperFunctions.CreateDecryptor(key, iv), CryptoStreamMode.Read, leaveOpen: true);
         }
+
 
         // Override necessary stream methods to use _cryptoStream for read operations
         public override int Read(byte[] buffer, int offset, int count)
@@ -83,5 +87,6 @@ namespace FlowEncrypt
             }
             base.Dispose(disposing);
         }
+
     }
 }
