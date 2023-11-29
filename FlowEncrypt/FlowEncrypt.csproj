@@ -18,7 +18,8 @@
     <Description>FlowEncrypt is a C# library providing robust encryption and decryption functionalities for files and in-memory data. Utilizing AES encryption with support for asymmetric key encryption of the salt, this library ensures secure handling of sensitive data.</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Version>1.0.4</Version>
-    <PackageReleaseNotes>clarified constructors for EncryptFiles</PackageReleaseNotes>
+    <PackageReleaseNotes>clarified constructors for EncryptFiles
+code cleanups</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
