@@ -55,14 +55,37 @@ IEnumerable<byte> encryptedData = EncryptData.Encrypt(data, password);
 IEnumerable<byte> decryptedData = EncryptData.Decrypt(encryptedData, password);
 ```
 ### Usage with streams
+##### Basic Encryption
+```csharp
+using MemoryStream outputStream = new MemoryStream(dataToEncrypt);
+using (EncryptingStream encryptStream = new (outputStream, password, publicKey: null))
+{
+    encryptStream.Write(originalData, 0, originalData.Length);
+}
+```
+
 ##### Basic Decryption
 
 ```csharp
-using MemoryStream memoryStream = new MemoryStream(encryptedData);
-using DecryptingStream decryptStream = new DecryptingStream(memoryStream, password);
+using MemoryStream inputStream = new MemoryStream(encryptedData);
+using DecryptingStream decryptStream = new DecryptingStream(inputStream, password);
 
 using StreamReader reader = new StreamReader(decryptStream);
 string decryptedText = reader.ReadToEnd();
+```
+
+##### Encryption with Public Key
+
+If the data was encrypted using a public key:
+
+```csharp
+(X509Certificate2 PublicKey, X509Certificate2 PrivateKey) keys = HelperFunctions.GenerateKeys();
+
+using MemoryStream outputStream = new ();
+using (EncryptingStream encryptStream = new (outputStream, password, keys.PublicKey))
+{
+    encryptStream.Write(originalData, 0, originalData.Length);
+}
 ```
 
 ##### Decryption with Private Key
@@ -72,8 +95,8 @@ If the data was encrypted using a public key:
 ```csharp
 X509Certificate2 privateKey = // Load your private key
 
-using MemoryStream memoryStream = new MemoryStream(encryptedDataWithPublicKey);
-using DecryptingStream decryptStream = new DecryptingStream(memoryStream, password, privateKey);
+using MemoryStream inputStream = new MemoryStream(encryptedDataWithPublicKey);
+using DecryptingStream decryptStream = new DecryptingStream(inputStream, password, privateKey);
 
 using StreamReader reader = new StreamReader(decryptStream);
 string decryptedTextWithPrivateKey = reader.ReadToEnd();
