@@ -1,5 +1,5 @@
 # FlowEncrypt
-![Logo]([path_to_your_logo](https://raw.githubusercontent.com/forReason/FlowEncrypt/master/FlowEncryptLogo.png))
+![Logo](https://raw.githubusercontent.com/forReason/FlowEncrypt/master/FlowEncryptLogo.png)
 
 ## Description
 
