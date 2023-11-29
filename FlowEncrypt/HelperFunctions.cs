@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
@@ -15,21 +17,41 @@ public static class HelperFunctions
     /// <param name="keySize">The size of the RSA key in bits. Default is 2048.</param>
     /// <param name="password">The password to secure the private key. Default is an empty string.</param>
     /// <returns>A tuple containing the public key certificate and the private key certificate.</returns>
-    public static (X509Certificate2 PublicKey, X509Certificate2 PrivateKey) GenerateKeys(int keySize = 2048, string password = "")
+    public static (X509Certificate2 PublicKey, X509Certificate2 PrivateKey) GenerateKeys(int keySize = 2048, SecureString? password = null)
     {
         using RSA rsa = RSA.Create(keySize);
         // Generate public and private key pair
-        // Create a certificate request and then generate a self-signed certificate
-        CertificateRequest certificateRequest = new ("cn=FlowEncrypt", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        CertificateRequest certificateRequest = new CertificateRequest("cn=FlowEncrypt", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         X509Certificate2 certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
 
         // Separate out the public key certificate
-        X509Certificate2 publicKeyCert = new (certificate.Export(X509ContentType.Cert));
+        X509Certificate2 publicKeyCert = new X509Certificate2(certificate.Export(X509ContentType.Cert));
 
         // Export the private key certificate in PFX format (contains private key)
-        X509Certificate2 privateKeyCert = new (certificate.Export(X509ContentType.Pfx), password, X509KeyStorageFlags.Exportable);
+        // If password is null, use an empty SecureString
+        SecureString emptyPassword = password ?? new SecureString();
+        X509Certificate2 privateKeyCert = new X509Certificate2(certificate.Export(X509ContentType.Pfx), emptyPassword, X509KeyStorageFlags.Exportable);
 
         return (publicKeyCert, privateKeyCert);
+    }
+
+    /// <summary>
+    /// Converts a regular string to a SecureString.
+    /// </summary>
+    /// <param name="input">The string to convert.</param>
+    /// <returns>A SecureString containing the characters from the input string.</returns>
+    public static SecureString ToSecureString(string input)
+    {
+        if (input == null)
+            throw new ArgumentNullException(nameof(input));
+
+        SecureString secure = new SecureString();
+        foreach (char c in input)
+        {
+            secure.AppendChar(c);
+        }
+        secure.MakeReadOnly();
+        return secure;
     }
 
     /// <summary>
@@ -42,22 +64,51 @@ public static class HelperFunctions
     /// <param name="hashAlgorithm">the hash algorithm to choose. default: sha-256</param>
     /// <returns>A tuple containing the generated key and IV.</returns>
     internal static (byte[] Key, byte[] IV) GenerateKeyAndIVFromPassword(
-        string password, 
-        byte[] salt, 
-        int keySize = 256, 
-        int iterations = 10000, 
+        SecureString password,
+        byte[] salt,
+        int keySize = 256,
+        int iterations = 10000,
         HashAlgorithmName hashAlgorithm = default)
     {
-        byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
+        if (password == null) throw new ArgumentNullException(nameof(password));
+        if (salt == null) throw new ArgumentNullException(nameof(salt));
+
         if (hashAlgorithm == default)
         {
             hashAlgorithm = HashAlgorithmName.SHA256; // Default to SHA-256
         }
 
-        using var rfc2898DeriveBytes = new Rfc2898DeriveBytes(passwordBytes, salt, iterations, hashAlgorithm);
-        byte[] key = rfc2898DeriveBytes.GetBytes(keySize / 8);
-        byte[] iv = rfc2898DeriveBytes.GetBytes(16); // AES block size is 16 bytes
-        return (key, iv);
+        IntPtr passwordBSTR = IntPtr.Zero;
+        byte[] passwordBytes = Array.Empty<byte>();
+
+        try
+        {
+            passwordBSTR = Marshal.SecureStringToBSTR(password);
+            int length = Marshal.ReadInt32(passwordBSTR, -4);
+            passwordBytes = new byte[length];
+            for (int i = 0; i < length; i++)
+            {
+                passwordBytes[i] = Marshal.ReadByte(passwordBSTR, i);
+            }
+
+            using var rfc2898DeriveBytes = new Rfc2898DeriveBytes(passwordBytes, salt, iterations, hashAlgorithm);
+            byte[] key = rfc2898DeriveBytes.GetBytes(keySize / 8);
+            byte[] iv = rfc2898DeriveBytes.GetBytes(16); // AES block size is 16 bytes
+
+            return (key, iv);
+        }
+        finally
+        {
+            if (passwordBSTR != IntPtr.Zero)
+            {
+                Marshal.ZeroFreeBSTR(passwordBSTR);
+            }
+
+            if (passwordBytes.Length > 0)
+            {
+                Array.Clear(passwordBytes, 0, passwordBytes.Length);
+            }
+        }
     }
 
 

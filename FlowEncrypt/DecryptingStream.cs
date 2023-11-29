@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace FlowEncrypt
@@ -22,6 +23,20 @@ namespace FlowEncrypt
         /// where data encrypted with a public key can only be decrypted with the corresponding private key.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseStream"/> is null.</exception>
         public DecryptingStream(Stream baseStream, string password, X509Certificate2? privateKey = null)
+            : this(baseStream, HelperFunctions.ToSecureString(password), privateKey)
+        {
+        }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DecryptingStream"/> class.
+        /// </summary>
+        /// <param name="baseStream">The stream containing the encrypted data.</param>
+        /// <param name="password">The password used for decryption. This password must match the password used for encryption. 
+        /// The password should be strong (e.g., a combination of letters, numbers, and special characters) to ensure security.</param>
+        /// <param name="privateKey">Optionally provide a private key for decryption if a public key was used to encrypt<br/>
+        /// This facilitates asymmetric encryption,
+        /// where data encrypted with a public key can only be decrypted with the corresponding private key.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseStream"/> is null.</exception>
+        public DecryptingStream(Stream baseStream, SecureString password, X509Certificate2? privateKey = null)
         {
             Stream baseStream1 = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
 

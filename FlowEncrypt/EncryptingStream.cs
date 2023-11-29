@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 
@@ -11,7 +12,6 @@ namespace FlowEncrypt
     {
         private readonly CryptoStream _cryptoStream;
         private readonly Aes _aes;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="EncryptingStream"/> class.
         /// </summary>
@@ -21,11 +21,23 @@ namespace FlowEncrypt
         /// This facilitates asymmetric encryption,
         /// where data encrypted with a public key can only be decrypted with the corresponding private </param>
         public EncryptingStream(Stream baseStream, string password, X509Certificate2? publicKey = null)
+            : this(baseStream, HelperFunctions.ToSecureString(password), publicKey)
+        {
+        }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EncryptingStream"/> class.
+        /// </summary>
+        /// <param name="baseStream">The stream where the encrypted data will be written.</param>
+        /// <param name="password">The password used for encryption.</param>
+        /// <param name="publicKey">Optionally provide a public key for encryption<br/>
+        /// This facilitates asymmetric encryption,
+        /// where data encrypted with a public key can only be decrypted with the corresponding private </param>
+        public EncryptingStream(Stream baseStream, SecureString password, X509Certificate2? publicKey = null)
         {
             Stream baseStream1 = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
             _aes = Aes.Create();
             _aes.KeySize = 256; // Set KeySize
-            
+
             // Generate a new random salt
             byte[] salt = RandomNumberGenerator.GetBytes(16);
 
