@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+	<TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -17,8 +17,8 @@
     <RepositoryType>git</RepositoryType>
     <Description>FlowEncrypt is a C# library providing robust encryption and decryption functionalities for files and in-memory data. Utilizing AES encryption with support for asymmetric key encryption of the salt, this library ensures secure handling of sensitive data.</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Version>1.0.1</Version>
-    <PackageReleaseNotes>Update Readme</PackageReleaseNotes>
+    <Version>1.0.2</Version>
+    <PackageReleaseNotes>Additionally target .Net 6</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
