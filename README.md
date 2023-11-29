@@ -22,7 +22,7 @@ FlowEncrypt is a C# library providing robust encryption and decryption functiona
 Clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/yourusername/FlowEncrypt.git
+git clone https://github.com/forReason/FlowEncrypt.git
 ```
 
 ### Usage
