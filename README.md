@@ -1,4 +1,5 @@
 # FlowEncrypt
+<img src="https://raw.githubusercontent.com/forReason/FlowEncrypt/master/FlowEncryptLogo.png" width="200" height="200">
 
 ## Description
 
