@@ -1,9 +1,8 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using FlowEncrypt;
 
-namespace FlowEncryptTests;
+namespace FlowEncrypt.Tests;
 
 public class EncryptionStreamTests
 {

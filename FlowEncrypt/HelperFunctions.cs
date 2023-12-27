@@ -111,7 +111,24 @@ public static class HelperFunctions
         }
     }
 
-
+    /// <summary>
+    /// Converts a SecureString to a regular string.
+    /// </summary>
+    /// <param name="secureString">The SecureString to convert.</param>
+    /// <returns>A regular string containing the value of the SecureString.</returns>
+    public static string SecureStringToString(SecureString secureString)
+    {
+        IntPtr unmanagedString = IntPtr.Zero;
+        try
+        {
+            unmanagedString = Marshal.SecureStringToGlobalAllocUnicode(secureString);
+            return Marshal.PtrToStringUni(unmanagedString);
+        }
+        finally
+        {
+            Marshal.ZeroFreeGlobalAllocUnicode(unmanagedString);
+        }
+    }
 
     /// <summary>
     /// Creates a decryptor transform for symmetric decryption using the specified key and IV.
@@ -125,6 +142,20 @@ public static class HelperFunctions
         aesAlg.Key = key;
         aesAlg.IV = iv;
         return aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+    }
+
+    /// <summary>
+    /// generates a random string in the desired length
+    /// </summary>
+    /// <param name="length"></param>
+    /// <returns></returns>
+    public static string GenerateRandomString(int length)
+    {
+        const string validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        Random random = new Random();
+
+        return new string(Enumerable.Repeat(validChars, length)
+                          .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
 }

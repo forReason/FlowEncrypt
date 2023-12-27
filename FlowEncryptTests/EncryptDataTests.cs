@@ -1,7 +1,7 @@
 using System.Text;
 using FlowEncrypt;
 
-namespace FlowEncryptTests;
+namespace FlowEncrypt.Tests;
 
 public class EncryptDataTests
 {

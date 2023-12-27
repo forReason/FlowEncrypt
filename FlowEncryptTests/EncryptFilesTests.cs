@@ -1,6 +1,6 @@
 using FlowEncrypt;
 
-namespace FlowEncryptTests;
+namespace FlowEncrypt.Tests;
 
 public class EncryptFilesTests
 {
