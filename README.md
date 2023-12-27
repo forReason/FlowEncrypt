@@ -55,6 +55,25 @@ IEnumerable<byte> encryptedData = EncryptData.Encrypt(data, password);
 // Decrypting data
 IEnumerable<byte> decryptedData = EncryptData.Decrypt(encryptedData, password);
 ```
+
+#### Simple String Encryption and decryption
+You can choose to encrypt / decrypt strings with a password or you can create an encrypted string variable which automatically handles encryption/decryption whenever you access this variable
+```csharp
+// encrypting a string
+IEnumerable<byte> encryptedData = EncryptedString.EncryptString("Mystring", "Mypassword");
+
+// decrypting a string
+string result = EncryptedString.DecryptString(encryptedData, "Mypassword");
+```
+
+```csharp
+// encrypting a string in memory
+var encryptedString = new EncryptedString("Optionalpassword");
+encryptedString.Value = "Store this encrypted in memory";
+string decryptedResult = encryptedString.Value;
+```
+Please note that EncryptedString uses a randomly generated password when you do not provide a password. This is the recommended option for storing strings in memory
+
 ### Usage with streams
 ##### Basic Encryption
 ```csharp
